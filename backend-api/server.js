@@ -17,14 +17,14 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration - FIXED FOR PRODUCTION
+// CORS Configuration - FIXED FOR ALL DEPLOYMENTS
 app.use(cors({
   origin: [
     'https://e-commerce-project-1-medk.vercel.app', // Your Admin Dashboard
     'https://e-commerce-project-1-medk-1e5ktkiic-abenezer-teketels-projects.vercel.app', // Your Admin Dashboard preview
+    'https://e-commerce-client-omega.vercel.app', // Your Client Website
     'http://localhost:3000', // Local development
-    'http://localhost:3001',
-    'https://your-client-website.vercel.app' // Your Client Website - UPDATE AFTER DEPLOYMENT
+    'http://localhost:3001'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -151,6 +151,9 @@ const startServer = async () => {
       console.log(`📊 Health check: /api/health`);
       console.log(`🛍️  E-commerce API ready!`);
       console.log(`⏰ Started at: ${new Date().toISOString()}`);
+      console.log(`🌐 Allowed Origins:`);
+      console.log(`   - https://e-commerce-project-1-medk.vercel.app (Admin)`);
+      console.log(`   - https://e-commerce-client-omega.vercel.app (Client)`);
     });
 
   } catch (error) {
