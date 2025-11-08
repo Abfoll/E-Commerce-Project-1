@@ -17,8 +17,31 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS Configuration - UPDATED FOR PRODUCTION
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000', // Local development
+      'http://localhost:3001',
+      'https://your-admin-client.vercel.app' // Your Vercel frontend - UPDATE THIS LATER
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚫 CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -26,14 +49,30 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check route
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Ecommerce API is running!',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    await sequelize.authenticate();
+    
+    res.json({
+      success: true,
+      message: 'Ecommerce API is running!',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      database: 'Connected ✅',
+      port: PORT
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Ecommerce API is running but database connection failed',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: 'Disconnected ❌',
+      error: error.message
+    });
+  }
 });
 
 // API Routes
@@ -44,14 +83,32 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Ecommerce Backend API',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      products: '/api/products',
+      orders: '/api/orders',
+      categories: '/api/categories',
+      users: '/api/users',
+      upload: '/api/upload'
+    },
+    documentation: 'Check /api/health for detailed status'
+  });
+});
+
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
 
 // Create default admin user
 const createDefaultAdmin = async () => {
-  // ✅ CORRECT: Import User model here
-  const { User } = require('./models'); // or './models/index'
+  const { User } = require('./models');
   
   try {
     const adminExists = await User.findOne({ where: { email: 'admin@ecommerce.com' } });
@@ -69,13 +126,17 @@ const createDefaultAdmin = async () => {
       console.log('ℹ️  Admin user already exists');
     }
   } catch (error) {
-    console.error('❌ Failed to create default admin:', error);
+    console.error('❌ Failed to create default admin:', error.message);
   }
 };
 
 // Database connection and server start
 const startServer = async () => {
   try {
+    console.log('🚀 Starting Ecommerce Backend Server...');
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Database: ${process.env.DATABASE_URL ? 'Neon PostgreSQL' : 'Local PostgreSQL'}`);
+
     // Test database connection
     await testConnection();
 
@@ -83,6 +144,9 @@ const startServer = async () => {
     const syncOptions = { force: false };
     if (process.env.NODE_ENV === 'development') {
       // syncOptions.force = true; // Uncomment to reset database in development
+      console.log('💡 Development mode: Database sync without force');
+    } else {
+      console.log('🏗️  Production mode: Safe database sync');
     }
 
     await sequelize.sync(syncOptions);
@@ -92,27 +156,29 @@ const startServer = async () => {
     await createDefaultAdmin();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🎉 Server running on http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
       console.log(`🛍️  E-commerce API ready!`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`⏰ Started at: ${new Date().toISOString()}`);
     });
 
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 };
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Promise Rejection:', err);
+  console.error('❌ Unhandled Promise Rejection:', err.message);
+  console.error('Stack:', err.stack);
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
+  console.error('❌ Uncaught Exception:', err.message);
+  console.error('Stack:', err.stack);
   process.exit(1);
 });
 
@@ -120,6 +186,7 @@ process.on('uncaughtException', (err) => {
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   await sequelize.close();
+  console.log('✅ Database connection closed');
   process.exit(0);
 });
 

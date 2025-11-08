@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ecommerce-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_hG9lbA1OrNcW@ep-old-rice-ag4j0vrx-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://your-admin-client.vercel.app
