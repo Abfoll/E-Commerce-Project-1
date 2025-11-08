@@ -17,25 +17,15 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS Configuration - UPDATED FOR PRODUCTION
+// CORS Configuration - FIXED FOR PRODUCTION
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:3000', // Local development
-      'http://localhost:3001',
-      'https://your-admin-client.vercel.app' // Your Vercel frontend - UPDATE THIS LATER
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('🚫 CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: [
+    'https://e-commerce-project-1-medk.vercel.app', // Your Admin Dashboard
+    'https://e-commerce-project-1-medk-1e5ktkiic-abenezer-teketels-projects.vercel.app', // Your Admin Dashboard preview
+    'http://localhost:3000', // Local development
+    'http://localhost:3001',
+    'https://your-client-website.vercel.app' // Your Client Website - UPDATE AFTER DEPLOYMENT
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
